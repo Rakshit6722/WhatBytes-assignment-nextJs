@@ -13,7 +13,7 @@ const Graph = () => {
   return (
     <div className="p-4 border border-gray-300 rounded-md">
       <p className="font-bold">Comparison Graph</p>
-      <div className="flex w-full text-sm justify-between items-center">
+      <div className="flex mb-5 sm:mb:0 w-full text-sm justify-between items-center">
         <div>
           <p>
             <span className="font-bold text-gray-700">
