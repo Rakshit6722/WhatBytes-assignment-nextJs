@@ -1,206 +1,117 @@
-'use client';
+import React, { PureComponent } from 'react';
+import { VictoryChart, VictoryLine, VictoryScatter, VictoryAxis, VictoryTooltip } from 'victory';
+import { connect } from 'react-redux';
 
-import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import dynamic from 'next/dynamic';
+// Sample data
+const data = [
+  { percentile: 10, numberOfStudents: 2 },
+  { percentile: 20, numberOfStudents: 4 },
+  { percentile: 30, numberOfStudents: 6 },
+  { percentile: 40, numberOfStudents: 8 },
+  { percentile: 50, numberOfStudents: 10 },
+  { percentile: 60, numberOfStudents: 7 },
+  { percentile: 70, numberOfStudents: 5 },
+  { percentile: 80, numberOfStudents: 3 },
+  { percentile: 90, numberOfStudents: 4 },
+  { percentile: 100, numberOfStudents: 1 }
+];
 
-// Dynamically import Recharts components with no SSR
-const ResponsiveContainer = dynamic(
-  () => import('recharts').then((mod) => mod.ResponsiveContainer),
-  { ssr: false }
-);
-const LineChart = dynamic(
-  () => import('recharts').then((mod) => mod.LineChart),
-  { ssr: false }
-);
-const Line = dynamic(
-  () => import('recharts').then((mod) => mod.Line),
-  { ssr: false }
-);
-const XAxis = dynamic(
-  () => import('recharts').then((mod) => mod.XAxis),
-  { ssr: false }
-);
-const Tooltip = dynamic(
-  () => import('recharts').then((mod) => mod.Tooltip),
-  { ssr: false }
-);
-const ReferenceLine = dynamic(
-  () => import('recharts').then((mod) => mod.ReferenceLine),
-  { ssr: false }
-);
-
-const DynamicPercentileChart = () => {
-  const [isMounted, setIsMounted] = useState(false);
-  const [activePoint, setActivePoint] = useState(null);
-  const [activeLineId, setActiveLineId] = useState(null);
-const [chartData, setChartData] = useState({
-  beforePercentile: [{ percentile: 0, value: 1 }, { percentile: 100, value: 1 }],
-  afterPercentile: [{ percentile: 0, value: 1 }, { percentile: 100, value: 1 }],
-});
-
-
-  const userPercentile = useSelector((state) => state.user.percentile);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Implementation of createSplitData function
-  const createSplitData = (percentile) => {
-    const generateDataPoints = (start, end, count) => {
-      const points = [];
-      const step = (end - start) / (count - 1);
-
-      for (let i = 0; i < count; i++) {
-        const x = start + step * i;
-        const value = 100 * Math.exp(-Math.pow((x - 50) / 30, 2));
-        points.push({ percentile: x, value });
-      }
-      return points;
-    };
-
-    const allData = generateDataPoints(0, 100, 100);
-    const beforePercentile = allData.filter((point) => point.percentile <= percentile);
-    const afterPercentile = allData.filter((point) => point.percentile >= percentile);
-
-    console.log('Before Percentile Data:', beforePercentile);
-    console.log('After Percentile Data:', afterPercentile);
-
-    return {
-      beforePercentile,
-      afterPercentile,
-    };
-  };
-
-  useEffect(() => {
-    console.log('User Percentile:', userPercentile);
-    if (userPercentile != null) {
-      const data = createSplitData(userPercentile);
-      setChartData(data);
+// Function to interpolate points between existing data points
+const interpolateData = (data) => {
+  const interpolated = [];
+  for (let i = 0; i < data.length - 1; i++) {
+    const start = data[i];
+    const end = data[i + 1];
+    const step = (end.percentile - start.percentile) / 100; // More points for smoothness
+    for (let j = 0; j <= 100; j++) {
+      const percentile = start.percentile + j * step;
+      const numberOfStudents = start.numberOfStudents + (end.numberOfStudents - start.numberOfStudents) * (j / 100);
+      interpolated.push({ percentile, numberOfStudents });
     }
-  }, [userPercentile]);
-
-  const CustomDot = ({ cx, cy, payload }) => {
-    if (payload.percentile === userPercentile) {
-      return (
-        <circle
-          cx={cx}
-          cy={cy}
-          r={4}
-          fill="#6C63FF"
-          stroke="#fff"
-          strokeWidth={2}
-        />
-      );
-    }
-    return null;
-  };
-
-  const CustomActiveDot = ({ cx, cy }) => (
-    <circle cx={cx} cy={cy} r={5} fill="#6C63FF" stroke="#fff" strokeWidth={2} />
-  );
-
-  const getLabelPosition = () => {
-    if (userPercentile < 30) return 'right';
-    if (userPercentile > 70) return 'left';
-    return 'top';
-  };
-
-  // Ensure the component only renders if mounted
-  if (!isMounted) {
-    return null;
   }
-
-  // Handle loading state
-  if (userPercentile === undefined || userPercentile === null) {
-    return <p>Loading...</p>;
-  }
-
-  return (
-    <div className="w-full h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          margin={{ top: 30, right: 40, left: 40, bottom: 20 }}
-          onMouseMove={(e) => {
-            if (e?.activePayload?.[0]) {
-              setActivePoint(e.activePayload[0].payload);
-              setActiveLineId(e.activePayload[0].dataKey);
-            }
-          }}
-          onMouseLeave={() => {
-            setActivePoint(null);
-            setActiveLineId(null);
-          }}
-        >
-          <XAxis
-            dataKey="percentile"
-            type="number"
-            domain={[0, 100]}
-            tickCount={5}
-            stroke="#666"
-            padding={{ left: 10, right: 10 }}
-            tickSize={8}
-            tickMargin={8}
-          />
-
-          <ReferenceLine
-            x={userPercentile}
-            stroke="#D1D5DB"
-            strokeWidth={1}
-            label={{
-              value: "your percentile",
-              position: getLabelPosition(),
-              fill: "#6B7280",
-              fontSize: 12,
-              offset: -10,
-            }}
-            style={{ zIndex: 1 }}
-          />
-
-          <Line
-            data={chartData.beforePercentile}
-            type="monotone"
-            dataKey="value"
-            stroke="#6C63FF"
-            strokeWidth={1.5}
-            dot={<CustomDot />}
-            activeDot={<CustomActiveDot />}
-            connectNulls
-            isAnimationActive={false}
-          />
-
-          <Line
-            data={chartData.afterPercentile}
-            type="monotone"
-            dataKey="value"
-            stroke="#6C63FF"
-            strokeWidth={1.5}
-            dot={<CustomDot />}
-            activeDot={false}
-            connectNulls
-            isAnimationActive={false}
-          />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                const data = payload[0].payload;
-                return (
-                  <div className="bg-white p-2 rounded shadow border border-gray-100">
-                    <p className="text-base font-medium">{Math.round(data.percentile)}</p>
-                    <p className="text-sm text-indigo-600">
-                      numberOfStudent: {Math.round(data.value)}
-                    </p>
-                  </div>
-                );
-              }
-              return null;
-            }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  );
+  return interpolated;
 };
 
-export default DynamicPercentileChart;
+class DynamicPercentileChart extends PureComponent {
+  render() {
+    const { percentile } = this.props;
+
+    // Interpolate data for a smoother curve
+    const interpolatedData = interpolateData(data);
+
+    // Find the point that corresponds to the user's percentile
+    const userPoint = interpolatedData.find((d) => d.percentile === percentile);
+
+    return (
+      <div style={{ width: '100%', height: '400px' }}>
+        <VictoryChart
+          domain={{ x: [0, 100], y: [0, 12] }} // Set domain for X and Y axes
+        >
+          {/* X Axis - Percentile with only specific tick values */}
+          <VictoryAxis
+            tickValues={[0, 25, 50, 75, 100]} // Only these tick values on X axis
+            style={{
+              ticks: { stroke: "grey", size: 5 },
+              tickLabels: { fontSize: 12 }
+            }}
+          />
+
+          {/* Line chart for the number of students */}
+          <VictoryLine
+            data={interpolatedData}
+            x="percentile"
+            y="numberOfStudents"
+            style={{
+              data: { stroke: "#8884d8", strokeWidth: 2 }
+            }}
+          />
+
+          {/* Scatter point to highlight the user's percentile */}
+          <VictoryScatter
+            data={userPoint ? [userPoint] : []}
+            x="percentile"
+            y="numberOfStudents"
+            size={7}
+            style={{
+              data: { fill: "#8884d8" }
+            }}
+            labels={({ datum }) => `${datum.percentile}\nnumberOfStudents: ${datum.numberOfStudents}`}
+            labelComponent={<VictoryTooltip dy={-7} />}
+          />
+
+          {/* Vertical Line for user's percentile */}
+          {userPoint && (
+            <VictoryLine
+              style={{
+                data: { stroke: "#8884d8", strokeDasharray: "5,5", strokeWidth: 1.5 }
+              }}
+              data={[
+                { x: percentile, y: 0 },
+                { x: percentile, y: userPoint.numberOfStudents }
+              ]}
+            />
+          )}
+
+          {/* Label for "Your Percentile" */}
+          {userPoint && (
+            <VictoryScatter
+              data={[{ x: percentile - 5, y: 9 }]} // Adjust to position near the percentile
+              labels={["Your Percentile"]}
+              labelComponent={<VictoryTooltip style={{ fontSize: 12, fill: "#8884d8" }} />}
+              size={0} // No visible point, only a label
+            />
+          )}
+        </VictoryChart>
+      </div>
+    );
+  }
+}
+
+// Map Redux state to props
+const mapStateToProps = (state) => {
+  return {
+    percentile: state.user.percentile, // Get user's percentile from Redux state
+  };
+};
+
+export default connect(mapStateToProps)(DynamicPercentileChart);

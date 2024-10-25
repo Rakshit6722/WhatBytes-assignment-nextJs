@@ -25,7 +25,7 @@ const Sidebar = ({ children }) => {
         },
     ];
 
-    // State to keep track of the active link
+  
     const [activeLink, setActiveLink] = useState('/skill-test'); // Initial active link
 
     const handleLinkClick = (path) => {
