@@ -41,13 +41,13 @@ const DynamicPercentileGraph = () => {
   ];
 
   function getYValueAtX(x, points) {
-    const leftPoint = points.reduce((prev, curr) => 
+    const leftPoint = points.reduce((prev, curr) =>
       curr.x <= x ? curr : prev
     );
     const rightPoint = points.find(point => point.x > x) || points[points.length - 1];
-    
+
     if (leftPoint === rightPoint) return leftPoint.y;
-    
+
     const ratio = (x - leftPoint.x) / (rightPoint.x - leftPoint.x);
     return leftPoint.y + ratio * (rightPoint.y - leftPoint.y);
   }
@@ -84,10 +84,10 @@ const DynamicPercentileGraph = () => {
     id: 'verticalLine',
     beforeDatasetsDraw: (chart) => {
       if (percentile === undefined) return;
-      
+
       const { ctx, scales: { x, y } } = chart;
       const xPos = x.getPixelForValue(percentile);
-      
+
       // Draw percentile vertical line
       ctx.save();
       ctx.beginPath();
@@ -103,7 +103,7 @@ const DynamicPercentileGraph = () => {
       if (tooltip?.getActiveElements()?.length) {
         const activePoint = tooltip.getActiveElements()[0];
         const x = activePoint.element.x;
-        
+
         ctx.save();
         ctx.beginPath();
         ctx.strokeStyle = 'rgba(107, 114, 255, 0.5)';
@@ -117,16 +117,16 @@ const DynamicPercentileGraph = () => {
     },
     afterDatasetsDraw: (chart) => {
       if (percentile === undefined) return;
-      
+
       const { ctx, scales: { x } } = chart;
       const xPos = x.getPixelForValue(percentile);
-      
+
       // Add percentile label
       ctx.save();
       ctx.font = '12px Arial';
       ctx.fillStyle = 'rgb(120, 120, 120)'; // Darker gray for the text
       ctx.textAlign = 'center';
-      ctx.fillText(`Your percentile`, xPos, 20);
+      ctx.fillText(`Your`, xPos, 20);
       ctx.restore();
 
       // Enhanced point highlighting on hover
@@ -134,13 +134,13 @@ const DynamicPercentileGraph = () => {
       if (tooltip?.getActiveElements()?.length) {
         const activePoint = tooltip.getActiveElements()[0];
         const meta = chart.getDatasetMeta(0);
-        
+
         meta.data.forEach((point, index) => {
           const isActive = index === activePoint.dataIndex;
           const baseRadius = 3;
           const hoverRadius = 7;
           const radius = isActive ? hoverRadius : baseRadius;
-          
+
           if (isActive) {
             // Draw point shadow
             ctx.save();
@@ -160,7 +160,7 @@ const DynamicPercentileGraph = () => {
           ctx.lineWidth = isActive ? 2 : 1;
           ctx.fill();
           ctx.stroke();
-          
+
           if (isActive) {
             // Draw inner dot
             ctx.beginPath();
@@ -168,7 +168,7 @@ const DynamicPercentileGraph = () => {
             ctx.fillStyle = 'white';
             ctx.fill();
           }
-          
+
           ctx.restore();
         });
       }
@@ -209,9 +209,13 @@ const DynamicPercentileGraph = () => {
             return `Percentile: ${value}`;
           },
           label: (context) => {
-            return context.datasetIndex === 1 ? 
-              'Your Position' : 
-              'Distribution Point';
+            if (context.datasetIndex === 0) {
+              const numStudents = context.raw.y;
+              return `No. of Students: ${numStudents}`;
+            } else if (context.datasetIndex === 1) {
+              return ``;
+            }
+            return '';
           }
         }
       }
@@ -227,7 +231,7 @@ const DynamicPercentileGraph = () => {
         },
         ticks: {
           stepSize: 25,
-          callback: function(value) {
+          callback: function (value) {
             return [0, 25, 50, 75, 100].includes(value) ? value : '';
           },
           font: {
