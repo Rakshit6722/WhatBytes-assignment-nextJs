@@ -126,7 +126,7 @@ const DynamicPercentileGraph = () => {
       ctx.font = '12px Arial';
       ctx.fillStyle = 'rgb(120, 120, 120)'; // Darker gray for the text
       ctx.textAlign = 'center';
-      ctx.fillText(`${percentile}th percentile`, xPos, 20);
+      ctx.fillText(`Your percentile`, xPos, 20);
       ctx.restore();
 
       // Enhanced point highlighting on hover
