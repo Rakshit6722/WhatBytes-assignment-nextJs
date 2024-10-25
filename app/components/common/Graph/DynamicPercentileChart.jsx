@@ -52,11 +52,15 @@ const DynamicPercentileGraph = () => {
       pointBorderColor: 'rgb(107, 114, 255)',
       borderWidth: 2,
       tension: 0.4,
-      fill: false
+      fill: false,
+      showLine: true
     }]
   };
 
   const options = {
+    animation: {
+      duration: 150 // Faster animations for smoother interactions
+    },
     responsive: true,
     maintainAspectRatio: false,
     layout: {
@@ -78,6 +82,9 @@ const DynamicPercentileGraph = () => {
         borderWidth: 1,
         padding: 8,
         displayColors: false,
+        position: 'nearest',
+        intersect: false,
+        mode: 'index',
         callbacks: {
           title: (context) => {
             const value = points[context[0].dataIndex].x;
@@ -85,7 +92,10 @@ const DynamicPercentileGraph = () => {
           },
           label: (context) => {
             return 'numberOfStudent: 4';
-          }
+          },
+          beforeTitle: () => null,
+          beforeLabel: () => null,
+          afterLabel: () => null
         }
       }
     },
@@ -118,15 +128,19 @@ const DynamicPercentileGraph = () => {
     },
     hover: {
       mode: 'nearest',
-      intersect: true
+      intersect: false,
+      axis: 'x'
+    },
+    interaction: {
+      mode: 'index',
+      intersect: false
     }
   };
 
   const verticalLinePlugin = {
     id: 'verticalLine',
-    afterDraw: (chart) => {
+    beforeDraw: (chart) => {
       const { ctx } = chart;
-      const activeElements = chart.getActiveElements();
       
       // Draw the percentile line
       if (percentile) {
@@ -151,34 +165,65 @@ const DynamicPercentileGraph = () => {
         ctx.fillText('your percentile', x - 5, yAxis.getPixelForValue(30));
         ctx.restore();
       }
-
-      // Draw hover line and fill point
-      if (activeElements.length > 0) {
-        const { datasetIndex, index } = activeElements[0];
+    },
+    afterDraw: (chart) => {
+      const { ctx, tooltip } = chart;
+      
+      if (tooltip?.getActiveElements()?.length) {
         const xAxis = chart.scales.x;
         const yAxis = chart.scales.y;
-        const value = points[index].x;
-        const x = xAxis.getPixelForValue(value);
+        const activePoint = tooltip.getActiveElements()[0];
+        const x = activePoint.element.x;
         
         // Draw vertical line on hover
         ctx.save();
         ctx.beginPath();
-        ctx.strokeStyle = 'rgb(200, 200, 200)';
+        ctx.strokeStyle = 'rgba(107, 114, 255, 0.5)';
         ctx.setLineDash([]);
+        ctx.lineWidth = 1;
         ctx.moveTo(x, yAxis.getPixelForValue(yAxis.max));
         ctx.lineTo(x, yAxis.getPixelForValue(yAxis.min));
         ctx.stroke();
         ctx.restore();
 
-        // Fill the point with larger size
-        const meta = chart.getDatasetMeta(datasetIndex);
-        const point = meta.data[index];
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI); // Increased size from 3 to 5
-        ctx.fillStyle = 'rgb(107, 114, 255)';
-        ctx.fill();
-        ctx.restore();
+        // Enhanced point highlighting
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((point, index) => {
+          const isActive = index === activePoint.dataIndex;
+          const baseRadius = 3;
+          const hoverRadius = 7;
+          const radius = isActive ? hoverRadius : baseRadius;
+          
+          // Draw point shadow for active point
+          if (isActive) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, radius + 3, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(107, 114, 255, 0.2)';
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // Draw point
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
+          ctx.fillStyle = isActive ? 'rgb(107, 114, 255)' : 'white';
+          ctx.strokeStyle = 'rgb(107, 114, 255)';
+          ctx.lineWidth = isActive ? 2 : 1;
+          ctx.fill();
+          ctx.stroke();
+          
+          // Draw inner dot for active point
+          if (isActive) {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+          }
+          
+          ctx.restore();
+        });
       }
     }
   };
