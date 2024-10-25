@@ -30,7 +30,7 @@ const Sidebar = ({ children }) => {
 
     const isActiveRoute = (route, name) => {
         if (name === 'Skill Test') {
-            if (route === '/') return true
+            return true
         }
         return route === pathname
     };
