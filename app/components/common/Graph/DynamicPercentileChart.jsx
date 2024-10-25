@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
   Chart as ChartJS,
@@ -21,7 +21,7 @@ ChartJS.register(
 );
 
 const DynamicPercentileGraph = () => {
-  const { percentile = 25 } = useSelector(state => state.user);
+  const { percentile } = useSelector(state => state.user);
 
   const points = [
     { x: 0, y: 5 },
@@ -40,32 +40,150 @@ const DynamicPercentileGraph = () => {
     { x: 100, y: 5 }
   ];
 
-  const data = {
-    datasets: [{
-      label: 'Distribution',
-      data: points,
-      borderColor: 'rgb(107, 114, 255)',
-      backgroundColor: 'rgb(107, 114, 255)',
-      pointRadius: 3,
-      pointBorderWidth: 1,
-      pointBackgroundColor: 'white',
-      pointBorderColor: 'rgb(107, 114, 255)',
-      borderWidth: 2,
-      tension: 0.4,
-      fill: false,
-      showLine: true
-    }]
-  };
+  function getYValueAtX(x, points) {
+    const leftPoint = points.reduce((prev, curr) => 
+      curr.x <= x ? curr : prev
+    );
+    const rightPoint = points.find(point => point.x > x) || points[points.length - 1];
+    
+    if (leftPoint === rightPoint) return leftPoint.y;
+    
+    const ratio = (x - leftPoint.x) / (rightPoint.x - leftPoint.x);
+    return leftPoint.y + ratio * (rightPoint.y - leftPoint.y);
+  }
 
-  const options = {
+  const data = useMemo(() => ({
+    datasets: [
+      {
+        label: 'Distribution',
+        data: points,
+        borderColor: 'rgb(107, 114, 255)',
+        backgroundColor: 'rgb(107, 114, 255)',
+        pointRadius: 3,
+        pointBorderWidth: 1,
+        pointBackgroundColor: 'white',
+        pointBorderColor: 'rgb(107, 114, 255)',
+        borderWidth: 2,
+        tension: 0.4,
+        fill: false,
+        showLine: true
+      },
+      {
+        label: 'Your Percentile',
+        data: percentile !== undefined ? [{ x: percentile, y: getYValueAtX(percentile, points) }] : [],
+        pointRadius: 6,
+        pointBorderWidth: 2,
+        pointBackgroundColor: 'white',
+        pointBorderColor: 'rgb(120, 120, 120)', // Darker gray for the dot
+        showLine: false
+      }
+    ]
+  }), [percentile]);
+
+  const verticalLinePlugin = useMemo(() => ({
+    id: 'verticalLine',
+    beforeDatasetsDraw: (chart) => {
+      if (percentile === undefined) return;
+      
+      const { ctx, scales: { x, y } } = chart;
+      const xPos = x.getPixelForValue(percentile);
+      
+      // Draw percentile vertical line
+      ctx.save();
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(120, 120, 120, 0.8)'; // Darker gray for the line
+      ctx.setLineDash([]);
+      ctx.moveTo(xPos, y.getPixelForValue(y.max));
+      ctx.lineTo(xPos, y.getPixelForValue(y.min));
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw hover line if there's an active tooltip
+      const tooltip = chart.tooltip;
+      if (tooltip?.getActiveElements()?.length) {
+        const activePoint = tooltip.getActiveElements()[0];
+        const x = activePoint.element.x;
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(107, 114, 255, 0.5)';
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1;
+        ctx.moveTo(x, y.getPixelForValue(y.max));
+        ctx.lineTo(x, y.getPixelForValue(y.min));
+        ctx.stroke();
+        ctx.restore();
+      }
+    },
+    afterDatasetsDraw: (chart) => {
+      if (percentile === undefined) return;
+      
+      const { ctx, scales: { x } } = chart;
+      const xPos = x.getPixelForValue(percentile);
+      
+      // Add percentile label
+      ctx.save();
+      ctx.font = '12px Arial';
+      ctx.fillStyle = 'rgb(120, 120, 120)'; // Darker gray for the text
+      ctx.textAlign = 'center';
+      ctx.fillText(`${percentile}th percentile`, xPos, 20);
+      ctx.restore();
+
+      // Enhanced point highlighting on hover
+      const tooltip = chart.tooltip;
+      if (tooltip?.getActiveElements()?.length) {
+        const activePoint = tooltip.getActiveElements()[0];
+        const meta = chart.getDatasetMeta(0);
+        
+        meta.data.forEach((point, index) => {
+          const isActive = index === activePoint.dataIndex;
+          const baseRadius = 3;
+          const hoverRadius = 7;
+          const radius = isActive ? hoverRadius : baseRadius;
+          
+          if (isActive) {
+            // Draw point shadow
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, radius + 3, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(107, 114, 255, 0.2)';
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // Draw point
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
+          ctx.fillStyle = isActive ? 'rgb(107, 114, 255)' : 'white';
+          ctx.strokeStyle = 'rgb(107, 114, 255)';
+          ctx.lineWidth = isActive ? 2 : 1;
+          ctx.fill();
+          ctx.stroke();
+          
+          if (isActive) {
+            // Draw inner dot
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+          }
+          
+          ctx.restore();
+        });
+      }
+    }
+  }), [percentile]);
+
+  const options = useMemo(() => ({
     animation: {
-      duration: 150 // Faster animations for smoother interactions
+      duration: 150
     },
     responsive: true,
     maintainAspectRatio: false,
     layout: {
       padding: {
-        top: 10,
+        top: 30,
         bottom: 10
       }
     },
@@ -87,15 +205,14 @@ const DynamicPercentileGraph = () => {
         mode: 'index',
         callbacks: {
           title: (context) => {
-            const value = points[context[0].dataIndex].x;
-            return `${value}`;
+            const value = context[0].raw.x;
+            return `Percentile: ${value}`;
           },
           label: (context) => {
-            return 'numberOfStudent: 4';
-          },
-          beforeTitle: () => null,
-          beforeLabel: () => null,
-          afterLabel: () => null
+            return context.datasetIndex === 1 ? 
+              'Your Position' : 
+              'Distribution Point';
+          }
         }
       }
     },
@@ -135,106 +252,26 @@ const DynamicPercentileGraph = () => {
       mode: 'index',
       intersect: false
     }
-  };
+  }), []);
 
-  const verticalLinePlugin = {
-    id: 'verticalLine',
-    beforeDraw: (chart) => {
-      const { ctx } = chart;
-      
-      // Draw the percentile line
-      if (percentile) {
-        const xAxis = chart.scales.x;
-        const yAxis = chart.scales.y;
-        const x = xAxis.getPixelForValue(percentile);
-        
-        ctx.save();
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgb(200, 200, 200)';
-        ctx.setLineDash([5, 5]);
-        ctx.moveTo(x, yAxis.getPixelForValue(yAxis.max));
-        ctx.lineTo(x, yAxis.getPixelForValue(yAxis.min));
-        ctx.stroke();
-        ctx.restore();
-        
-        // Add "your percentile" text
-        ctx.save();
-        ctx.font = '12px Arial';
-        ctx.fillStyle = 'rgb(100, 100, 100)';
-        ctx.textAlign = 'right';
-        ctx.fillText('your percentile', x - 5, yAxis.getPixelForValue(30));
-        ctx.restore();
-      }
-    },
-    afterDraw: (chart) => {
-      const { ctx, tooltip } = chart;
-      
-      if (tooltip?.getActiveElements()?.length) {
-        const xAxis = chart.scales.x;
-        const yAxis = chart.scales.y;
-        const activePoint = tooltip.getActiveElements()[0];
-        const x = activePoint.element.x;
-        
-        // Draw vertical line on hover
-        ctx.save();
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(107, 114, 255, 0.5)';
-        ctx.setLineDash([]);
-        ctx.lineWidth = 1;
-        ctx.moveTo(x, yAxis.getPixelForValue(yAxis.max));
-        ctx.lineTo(x, yAxis.getPixelForValue(yAxis.min));
-        ctx.stroke();
-        ctx.restore();
-
-        // Enhanced point highlighting
-        const meta = chart.getDatasetMeta(0);
-        meta.data.forEach((point, index) => {
-          const isActive = index === activePoint.dataIndex;
-          const baseRadius = 3;
-          const hoverRadius = 7;
-          const radius = isActive ? hoverRadius : baseRadius;
-          
-          // Draw point shadow for active point
-          if (isActive) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, radius + 3, 0, 2 * Math.PI);
-            ctx.fillStyle = 'rgba(107, 114, 255, 0.2)';
-            ctx.fill();
-            ctx.restore();
-          }
-
-          // Draw point
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
-          ctx.fillStyle = isActive ? 'rgb(107, 114, 255)' : 'white';
-          ctx.strokeStyle = 'rgb(107, 114, 255)';
-          ctx.lineWidth = isActive ? 2 : 1;
-          ctx.fill();
-          ctx.stroke();
-          
-          // Draw inner dot for active point
-          if (isActive) {
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
-            ctx.fillStyle = 'white';
-            ctx.fill();
-          }
-          
-          ctx.restore();
-        });
-      }
-    }
-  };
-
-  ChartJS.register(verticalLinePlugin);
+  useEffect(() => {
+    const plugin = verticalLinePlugin;
+    ChartJS.register(plugin);
+    return () => {
+      ChartJS.unregister(plugin);
+    };
+  }, [verticalLinePlugin]);
 
   return (
-    <div className="flex justify-center items-center h-64">
-      <div className="w-full max-w-lg h-full">
+    <div className="flex flex-col items-center w-full space-y-4">
+      <div className="flex justify-center items-center h-64 w-full max-w-lg">
         <Line options={options} data={data} />
       </div>
+      {percentile !== undefined && (
+        <div className="text-sm text-gray-600"> {/* Darker gray for the bottom text */}
+          Your score is in the {percentile}th percentile
+        </div>
+      )}
     </div>
   );
 };
