@@ -43,16 +43,17 @@ class DynamicPercentileChart extends PureComponent {
     const userPoint = interpolatedData.find((d) => d.percentile === percentile);
 
     return (
-      <div style={{ width: '100%', height: '400px' }}>
+      <div style={{ width: '100%', height: '300px', margin: '0', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <VictoryChart
           domain={{ x: [0, 100], y: [0, 12] }} // Set domain for X and Y axes
+          padding={{ top: 10, bottom: 50, left: 30, right: 40 }} // Increased bottom padding for better visibility
         >
           {/* X Axis - Percentile with only specific tick values */}
           <VictoryAxis
             tickValues={[0, 25, 50, 75, 100]} // Only these tick values on X axis
             style={{
               ticks: { stroke: "grey", size: 5 },
-              tickLabels: { fontSize: 12 }
+              tickLabels: { fontSize: 12, padding: 15, angle: 0 } // Increased padding to prevent cutting
             }}
           />
 
@@ -75,7 +76,7 @@ class DynamicPercentileChart extends PureComponent {
             style={{
               data: { fill: "#8884d8" }
             }}
-            labels={({ datum }) => `${datum.percentile}\nnumberOfStudents: ${datum.numberOfStudents}`}
+            labels={({ datum }) => `${datum.percentile}\nNumber of Students: ${datum.numberOfStudents}`}
             labelComponent={<VictoryTooltip dy={-7} />}
           />
 
