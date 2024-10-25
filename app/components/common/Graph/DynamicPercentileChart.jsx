@@ -1,118 +1,197 @@
-import React, { PureComponent } from 'react';
-import { VictoryChart, VictoryLine, VictoryScatter, VictoryAxis, VictoryTooltip } from 'victory';
-import { connect } from 'react-redux';
+import React from 'react';
+import { useSelector } from 'react-redux';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 
-// Sample data
-const data = [
-  { percentile: 10, numberOfStudents: 2 },
-  { percentile: 20, numberOfStudents: 4 },
-  { percentile: 30, numberOfStudents: 6 },
-  { percentile: 40, numberOfStudents: 8 },
-  { percentile: 50, numberOfStudents: 10 },
-  { percentile: 60, numberOfStudents: 7 },
-  { percentile: 70, numberOfStudents: 5 },
-  { percentile: 80, numberOfStudents: 3 },
-  { percentile: 90, numberOfStudents: 4 },
-  { percentile: 100, numberOfStudents: 1 }
-];
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip
+);
 
-// Function to interpolate points between existing data points
-const interpolateData = (data) => {
-  const interpolated = [];
-  for (let i = 0; i < data.length - 1; i++) {
-    const start = data[i];
-    const end = data[i + 1];
-    const step = (end.percentile - start.percentile) / 100; // More points for smoothness
-    for (let j = 0; j <= 100; j++) {
-      const percentile = start.percentile + j * step;
-      const numberOfStudents = start.numberOfStudents + (end.numberOfStudents - start.numberOfStudents) * (j / 100);
-      interpolated.push({ percentile, numberOfStudents });
-    }
-  }
-  return interpolated;
-};
+const DynamicPercentileGraph = () => {
+  const { percentile = 25 } = useSelector(state => state.user);
 
-class DynamicPercentileChart extends PureComponent {
-  render() {
-    const { percentile } = this.props;
+  const points = [
+    { x: 0, y: 5 },
+    { x: 10, y: 8 },
+    { x: 20, y: 12 },
+    { x: 25, y: 25 },
+    { x: 30, y: 35 },
+    { x: 35, y: 45 },
+    { x: 40, y: 65 },
+    { x: 45, y: 90 },
+    { x: 50, y: 85 },
+    { x: 60, y: 55 },
+    { x: 70, y: 25 },
+    { x: 80, y: 15 },
+    { x: 90, y: 25 },
+    { x: 100, y: 5 }
+  ];
 
-    // Interpolate data for a smoother curve
-    const interpolatedData = interpolateData(data);
-
-    // Find the point that corresponds to the user's percentile
-    const userPoint = interpolatedData.find((d) => d.percentile === percentile);
-
-    return (
-      <div style={{ width: '100%', height: '300px', margin: '0', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <VictoryChart
-          domain={{ x: [0, 100], y: [0, 12] }} // Set domain for X and Y axes
-          padding={{ top: 10, bottom: 50, left: 30, right: 40 }} // Increased bottom padding for better visibility
-        >
-          {/* X Axis - Percentile with only specific tick values */}
-          <VictoryAxis
-            tickValues={[0, 25, 50, 75, 100]} // Only these tick values on X axis
-            style={{
-              ticks: { stroke: "grey", size: 5 },
-              tickLabels: { fontSize: 12, padding: 15, angle: 0 } // Increased padding to prevent cutting
-            }}
-          />
-
-          {/* Line chart for the number of students */}
-          <VictoryLine
-            data={interpolatedData}
-            x="percentile"
-            y="numberOfStudents"
-            style={{
-              data: { stroke: "#8884d8", strokeWidth: 2 }
-            }}
-          />
-
-          {/* Scatter point to highlight the user's percentile */}
-          <VictoryScatter
-            data={userPoint ? [userPoint] : []}
-            x="percentile"
-            y="numberOfStudents"
-            size={7}
-            style={{
-              data: { fill: "#8884d8" }
-            }}
-            labels={({ datum }) => `${datum.percentile}\nNumber of Students: ${datum.numberOfStudents}`}
-            labelComponent={<VictoryTooltip dy={-7} />}
-          />
-
-          {/* Vertical Line for user's percentile */}
-          {userPoint && (
-            <VictoryLine
-              style={{
-                data: { stroke: "#8884d8", strokeDasharray: "5,5", strokeWidth: 1.5 }
-              }}
-              data={[
-                { x: percentile, y: 0 },
-                { x: percentile, y: userPoint.numberOfStudents }
-              ]}
-            />
-          )}
-
-          {/* Label for "Your Percentile" */}
-          {userPoint && (
-            <VictoryScatter
-              data={[{ x: percentile - 5, y: 9 }]} // Adjust to position near the percentile
-              labels={["Your Percentile"]}
-              labelComponent={<VictoryTooltip style={{ fontSize: 12, fill: "#8884d8" }} />}
-              size={0} // No visible point, only a label
-            />
-          )}
-        </VictoryChart>
-      </div>
-    );
-  }
-}
-
-// Map Redux state to props
-const mapStateToProps = (state) => {
-  return {
-    percentile: state.user.percentile, // Get user's percentile from Redux state
+  const data = {
+    datasets: [{
+      label: 'Distribution',
+      data: points,
+      borderColor: 'rgb(107, 114, 255)',
+      backgroundColor: 'rgb(107, 114, 255)',
+      pointRadius: 3,
+      pointBorderWidth: 1,
+      pointBackgroundColor: 'white',
+      pointBorderColor: 'rgb(107, 114, 255)',
+      borderWidth: 2,
+      tension: 0.4,
+      fill: false
+    }]
   };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {
+      padding: {
+        top: 10,
+        bottom: 10
+      }
+    },
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'white',
+        titleColor: 'black',
+        bodyColor: 'rgb(107, 114, 255)',
+        borderColor: 'rgb(200, 200, 200)',
+        borderWidth: 1,
+        padding: 8,
+        displayColors: false,
+        callbacks: {
+          title: (context) => {
+            const value = points[context[0].dataIndex].x;
+            return `${value}`;
+          },
+          label: (context) => {
+            return 'numberOfStudent: 4';
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        type: 'linear',
+        display: true,
+        min: 0,
+        max: 100,
+        grid: {
+          display: false
+        },
+        ticks: {
+          stepSize: 25,
+          callback: function(value) {
+            return [0, 25, 50, 75, 100].includes(value) ? value : '';
+          },
+          font: {
+            size: 12
+          },
+          color: 'rgb(100, 100, 100)'
+        }
+      },
+      y: {
+        display: false,
+        grid: {
+          display: false
+        }
+      }
+    },
+    hover: {
+      mode: 'nearest',
+      intersect: true
+    }
+  };
+
+  const verticalLinePlugin = {
+    id: 'verticalLine',
+    afterDraw: (chart) => {
+      const { ctx } = chart;
+      const activeElements = chart.getActiveElements();
+      
+      // Draw the percentile line
+      if (percentile) {
+        const xAxis = chart.scales.x;
+        const yAxis = chart.scales.y;
+        const x = xAxis.getPixelForValue(percentile);
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgb(200, 200, 200)';
+        ctx.setLineDash([5, 5]);
+        ctx.moveTo(x, yAxis.getPixelForValue(yAxis.max));
+        ctx.lineTo(x, yAxis.getPixelForValue(yAxis.min));
+        ctx.stroke();
+        ctx.restore();
+        
+        // Add "your percentile" text
+        ctx.save();
+        ctx.font = '12px Arial';
+        ctx.fillStyle = 'rgb(100, 100, 100)';
+        ctx.textAlign = 'right';
+        ctx.fillText('your percentile', x - 5, yAxis.getPixelForValue(30));
+        ctx.restore();
+      }
+
+      // Draw hover line and fill point
+      if (activeElements.length > 0) {
+        const { datasetIndex, index } = activeElements[0];
+        const xAxis = chart.scales.x;
+        const yAxis = chart.scales.y;
+        const value = points[index].x;
+        const x = xAxis.getPixelForValue(value);
+        
+        // Draw vertical line on hover
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgb(200, 200, 200)';
+        ctx.setLineDash([]);
+        ctx.moveTo(x, yAxis.getPixelForValue(yAxis.max));
+        ctx.lineTo(x, yAxis.getPixelForValue(yAxis.min));
+        ctx.stroke();
+        ctx.restore();
+
+        // Fill the point with larger size
+        const meta = chart.getDatasetMeta(datasetIndex);
+        const point = meta.data[index];
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI); // Increased size from 3 to 5
+        ctx.fillStyle = 'rgb(107, 114, 255)';
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  };
+
+  ChartJS.register(verticalLinePlugin);
+
+  return (
+    <div className="flex justify-center items-center h-64">
+      <div className="w-full max-w-lg h-full">
+        <Line options={options} data={data} />
+      </div>
+    </div>
+  );
 };
 
-export default connect(mapStateToProps)(DynamicPercentileChart);
+export default DynamicPercentileGraph;
