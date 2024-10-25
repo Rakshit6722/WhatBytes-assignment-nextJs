@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { RiBarChartFill } from 'react-icons/ri';
 import { TfiMedallAlt } from 'react-icons/tfi';
@@ -26,29 +25,24 @@ const Sidebar = ({ children }) => {
         },
     ];
 
-    const pathname = usePathname();
+    // State to keep track of the active link
+    const [activeLink, setActiveLink] = useState('/skill-test'); // Initial active link
 
-    const isActiveRoute = (route, name) => {
-        if (name === 'Skill Test') {
-            return true
-        }
-        return route === pathname
+    const handleLinkClick = (path) => {
+        setActiveLink(path);
     };
 
     return (
         <div className="font-custom">
             <div className="sm:flex h-full">
                 {/* Sidebar for larger screens */}
-                <div className="w-[15%] hidden sm:block border-r-2 border-gray-300 font-bold text-gray-600  text-[.95rem] px-2">
+                <div className="w-[15%] hidden sm:block border-r-2 border-gray-300 font-bold text-gray-600 text-[.95rem] px-2">
                     <ul className="mt-16 flex flex-col gap-5">
                         {links.map((link) => (
                             <li key={link.element} className="cursor-pointer">
-                                <Link href={link.path}>
+                                <Link href={link.path} onClick={() => handleLinkClick(link.path)}>
                                     <div
-                                        className={`flex gap-5 items-center p-4 transition-all duration-300 ${isActiveRoute(link.path, link.element)
-                                                ? 'bg-blue-100 text-blue-600 rounded-r-full'
-                                                : ''
-                                            }`}
+                                        className={`flex gap-5 items-center p-4 transition-all duration-300 ${activeLink === link.path ? 'bg-blue-100 text-blue-600 rounded-r-full' : ''}`}
                                     >
                                         <div className="text-lg sm:text-3xl lg:text-2xl">
                                             {link.logo}
@@ -69,10 +63,9 @@ const Sidebar = ({ children }) => {
                         <ul className="flex justify-around p-2">
                             {links.map((link) => (
                                 <li key={link.element} className="cursor-pointer">
-                                    <Link href={link.path}>
+                                    <Link href={link.path} onClick={() => handleLinkClick(link.path)}>
                                         <div
-                                            className={`flex flex-col items-center p-2 transition-all duration-300 ${isActiveRoute(link.path) ? 'text-blue-700' : 'text-gray-600'
-                                                }`}
+                                            className={`flex flex-col items-center p-2 transition-all duration-300 ${activeLink === link.path ? 'text-blue-700' : 'text-gray-600'}`}
                                         >
                                             <div className="text-xl">{link.logo}</div>
                                             <span className="text-sm">{link.element}</span>

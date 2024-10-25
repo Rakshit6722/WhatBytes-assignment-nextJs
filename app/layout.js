@@ -6,6 +6,7 @@ import { Providers } from "@/store/provider";
 import Sidebar from "./components/common/Sidebar";
 import Navbar from "./components/common/Navbar";
 
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
